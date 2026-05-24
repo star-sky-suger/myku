@@ -1,4 +1,4 @@
-const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || '你的用户名/你的仓库名';
+const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';
 const BRANCH = window.APP_CONFIG?.BRANCH || 'main';
 const FILES_DIR = window.APP_CONFIG?.FILES_DIR || 'files/';
 
