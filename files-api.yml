@@ -1,0 +1,119 @@
+name: Files API
+
+on:
+  repository_dispatch:
+    types: [files-api]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: '操作类型: list, upload, delete'
+        required: true
+      filename:
+        description: '文件名'
+        required: false
+      content:
+        description: '文件内容 (base64)'
+        required: false
+      sha:
+        description: '文件 SHA (删除时需要)'
+        required: false
+      request_id:
+        description: '请求ID'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  handle-files:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Setup Git
+        run: |
+          git config user.name "Files API Bot"
+          git config user.email "bot@files-api.local"
+
+      - name: Ensure directories exist
+        run: |
+          mkdir -p files
+          mkdir -p status
+
+      - name: Handle List Action
+        if: github.event.action == 'list' || inputs.action == 'list'
+        run: |
+          REQUEST_ID="${{ github.event.client_payload.request_id || inputs.request_id }}"
+          
+          if [ -d "files" ]; then
+            FILES_JSON="[]"
+            for file in files/*; do
+              if [ -f "$file" ]; then
+                FILENAME=$(basename "$file")
+                SIZE=$(stat -c%s "$file")
+                SHA=$(git rev-parse HEAD:files/"$FILENAME" 2>/dev/null || echo "")
+                FILES_JSON=$(echo "$FILES_JSON" | jq --arg name "$FILENAME" --arg path "files/$FILENAME" --arg size "$SIZE" --arg sha "$SHA" '. + [{"name": $name, "path": $path, "size": ($size | tonumber), "sha": $sha}]')
+              fi
+            done
+            echo "{\"success\": true, \"files\": $FILES_JSON}" > "status/${REQUEST_ID}.json"
+          else
+            echo "{\"success\": true, \"files\": []}" > "status/${REQUEST_ID}.json"
+          fi
+          
+          git add "status/${REQUEST_ID}.json"
+          git commit -m "Status: list files [${REQUEST_ID}]"
+          git push
+
+      - name: Handle Upload Action
+        if: github.event.action == 'upload' || inputs.action == 'upload'
+        run: |
+          REQUEST_ID="${{ github.event.client_payload.request_id || inputs.request_id }}"
+          FILENAME="${{ github.event.client_payload.filename || inputs.filename }}"
+          CONTENT="${{ github.event.client_payload.content || inputs.content }}"
+          
+          if [ -z "$FILENAME" ] || [ -z "$CONTENT" ]; then
+            echo "{\"success\": false, \"error\": \"缺少文件名或内容\"}" > "status/${REQUEST_ID}.json"
+          elif [ -f "files/$FILENAME" ]; then
+            echo "{\"success\": false, \"error\": \"文件已存在\"}" > "status/${REQUEST_ID}.json"
+          else
+            echo "$CONTENT" | base64 -d > "files/$FILENAME"
+            git add "files/$FILENAME"
+            git commit -m "Upload: $FILENAME [${REQUEST_ID}]"
+            git push
+            echo "{\"success\": true, \"message\": \"上传成功\"}" > "status/${REQUEST_ID}.json"
+          fi
+          
+          git add "status/${REQUEST_ID}.json"
+          git commit -m "Status: upload [${REQUEST_ID}]" --allow-empty
+          git push
+
+      - name: Handle Delete Action
+        if: github.event.action == 'delete' || inputs.action == 'delete'
+        run: |
+          REQUEST_ID="${{ github.event.client_payload.request_id || inputs.request_id }}"
+          FILENAME="${{ github.event.client_payload.filename || inputs.filename }}"
+          
+          if [ -z "$FILENAME" ]; then
+            echo "{\"success\": false, \"error\": \"缺少文件名\"}" > "status/${REQUEST_ID}.json"
+          elif [ ! -f "files/$FILENAME" ]; then
+            echo "{\"success\": false, \"error\": \"文件不存在\"}" > "status/${REQUEST_ID}.json"
+          else
+            git rm "files/$FILENAME"
+            git commit -m "Delete: $FILENAME [${REQUEST_ID}]"
+            git push
+            echo "{\"success\": true, \"message\": \"删除成功\"}" > "status/${REQUEST_ID}.json"
+          fi
+          
+          git add "status/${REQUEST_ID}.json"
+          git commit -m "Status: delete [${REQUEST_ID}]" --allow-empty
+          git push
+
+      - name: Cleanup old status files
+        run: |
+          find status -name "*.json" -mtime +1 -delete 2>/dev/null || true
+          git add status
+          git commit -m "Cleanup old status files" --allow-empty || true
+          git push || true
