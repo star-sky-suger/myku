@@ -1,0 +1,85 @@
+name: File Operations
+
+on:
+  repository_dispatch:
+    types: [file-upload, file-delete]
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Action type'
+        required: true
+        type: choice
+        options:
+          - list
+      filename:
+        description: 'File name (for upload/delete)'
+        required: false
+      content:
+        description: 'File content (Base64 for upload)'
+        required: false
+
+jobs:
+  list-files:
+    if: github.event.action == 'list' || github.event_name == 'workflow_dispatch' && inputs.action == 'list'
+    runs-on: ubuntu-latest
+    steps:
+      - name: List files
+        run: |
+          echo "=== File List ==="
+          if [ -d "files" ]; then
+            find files -type f -name "*" | while read f; do
+              size=$(stat -c%s "$f" 2>/dev/null || stat -f%z "$f" 2>/dev/null)
+              echo "$f|$size"
+            done
+          else
+            echo "files/||"
+          fi
+
+  upload-file:
+    if: github.event.action == 'file-upload'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create files directory
+        run: mkdir -p files
+
+      - name: Decode and save file
+        env:
+          FILENAME: ${{ github.event.client_payload.filename }}
+          CONTENT: ${{ github.event.client_payload.content }}
+        run: |
+          echo "$CONTENT" | base64 -d > "files/$FILENAME"
+          echo "File uploaded: $FILENAME"
+
+      - name: Commit and push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add files/
+          git commit -m "Upload file: ${{ github.event.client_payload.filename }}"
+          git push
+
+  delete-file:
+    if: github.event.action == 'file-delete'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Delete file
+        env:
+          FILENAME: ${{ github.event.client_payload.filename }}
+        run: |
+          if [ -f "files/$FILENAME" ]; then
+            rm "files/$FILENAME"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add files/
+            git commit -m "Delete file: $FILENAME"
+            git push
+            echo "File deleted: $FILENAME"
+          else
+            echo "File not found: $FILENAME"
+          fi
