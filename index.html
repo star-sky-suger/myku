@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>文件共享平台</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>📁 文件共享平台</h1>
+        <p>无需登录，直接上传和下载文件</p>
+    </header>
+
+    <main>
+        <!-- 上传区域 -->
+        <section class="upload-section">
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon">📤</div>
+                <p>拖拽文件到此处上传</p>
+                <p>或</p>
+                <button class="upload-btn" id="uploadBtn">选择文件</button>
+                <input type="file" id="fileInput" multiple hidden>
+            </div>
+            <div class="upload-progress" id="uploadProgress"></div>
+        </section>
+
+        <!-- 文件列表 -->
+        <section class="files-section">
+            <h2>📂 文件列表</h2>
+            <div class="files-container" id="filesContainer">
+                <div class="loading" id="loading">加载中...</div>
+            </div>
+        </section>
+
+        <!-- 文件预览模态框 -->
+        <div class="modal" id="previewModal">
+            <div class="modal-content">
+                <span class="close" id="closeModal">&times;</span>
+                <div class="preview-header">
+                    <h3 id="previewTitle">文件预览</h3>
+                </div>
+                <div class="preview-body" id="previewBody"></div>
+                <div class="preview-footer">
+                    <a href="#" id="downloadLink" class="download-btn" download>下载文件</a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 文件共享平台 - 无需登录，安全便捷</p>
+    </footer>
+
+    <script src="config.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
