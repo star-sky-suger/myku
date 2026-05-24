@@ -18,9 +18,20 @@ const downloadLink = document.getElementById('downloadLink');
 
 // 初始化
 document.addEventListener('DOMContentLoaded', () => {
+    validateConfig();
     loadFiles();
     setupEventListeners();
 });
+
+// 验证配置
+function validateConfig() {
+    if (!GH_TOKEN || GH_TOKEN === '') {
+        alert('警告：未配置 GH_TOKEN，文件上传功能可能无法正常工作');
+    }
+    if (!GITHUB_REPO || GITHUB_REPO === 'username/repo') {
+        alert('警告：未配置正确的仓库名称');
+    }
+}
 
 // 设置事件监听
 function setupEventListeners() {
@@ -110,8 +121,24 @@ async function uploadFile(file, index, total) {
     });
     
     if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || '上传失败');
+        let errorMessage = `上传失败 (HTTP ${response.status})`;
+        try {
+            const error = await response.json();
+            errorMessage = error.message || errorMessage;
+        } catch (e) {
+            // 如果无法解析JSON，使用状态码作为错误信息
+        }
+        
+        // 针对常见错误提供更详细的提示
+        if (errorMessage.includes('Bad credentials')) {
+            errorMessage = '认证失败：请检查 GH_TOKEN 是否正确配置，确保 token 具有 repo 权限';
+        } else if (errorMessage.includes('Not Found')) {
+            errorMessage = '仓库不存在：请检查 GITHUB_REPO 配置是否正确';
+        } else if (errorMessage.includes('Forbidden')) {
+            errorMessage = '权限不足：请确保 GH_TOKEN 具有 repo 权限';
+        }
+        
+        throw new Error(errorMessage);
     }
     
     updateProgress(index, total);
