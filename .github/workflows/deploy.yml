@@ -22,12 +22,18 @@ jobs:
 
       - name: Generate config.js with environment variables
         run: |
-          echo "// 配置文件 - 由GitHub Actions自动生成" > config.js
-          echo "window.APP_CONFIG = {" >> config.js
+          echo "window.APP_CONFIG = {" > config.js
           echo "    GITHUB_REPO: '${{ github.repository }}'," >> config.js
           echo "    GH_TOKEN: '${{ secrets.GH_TOKEN }}'," >> config.js
           echo "    BRANCH: 'main'," >> config.js
           echo "    FILES_DIR: 'files/'}" >> config.js
+
+      - name: Update index.html with injected config
+        run: |
+          sed -i "s|const GITHUB_REPO = 'star-sky-suger/myku';|const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';|g" index.html
+          sed -i "s|const GH_TOKEN = '';|const GH_TOKEN = window.APP_CONFIG?.GH_TOKEN || '';|g" index.html
+          sed -i "/<script src=\"config.js\"><\/script>/d" index.html
+          sed -i "/<script>/i\\    <script src=\"config.js\"></script>" index.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
