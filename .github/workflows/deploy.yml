@@ -1,48 +1,44 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
-    branches:
-      - main
+    branches: [ main ]
   workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pages: write
-      id-token: write
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          fetch-depth: 0
 
-      - name: Generate config.js with environment variables
+      - name: Generate config.js
         run: |
           echo "window.APP_CONFIG = {" > config.js
-          echo "    GITHUB_REPO: '${{ github.repository }}'," >> config.js
-          echo "    GH_TOKEN: '${{ secrets.GH_TOKEN }}'," >> config.js
-          echo "    BRANCH: 'main'," >> config.js
-          echo "    FILES_DIR: 'files/'}" >> config.js
-
-      - name: Update index.html with injected config
-        run: |
-          sed -i "s|const GITHUB_REPO = 'star-sky-suger/myku';|const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';|g" index.html
-          sed -i "s|const GH_TOKEN = '';|const GH_TOKEN = window.APP_CONFIG?.GH_TOKEN || '';|g" index.html
-          sed -i "/<script src=\"config.js\"><\/script>/d" index.html
-          sed -i "/<script>/i\\    <script src=\"config.js\"></script>" index.html
+          echo "  GITHUB_REPO: '${{ github.repository }}'," >> config.js
+          echo "  BRANCH: 'main'," >> config.js
+          echo "  FILES_DIR: 'files/'," >> config.js
+          echo "  GH_TOKEN: '${{ secrets.GH_TOKEN }}'" >> config.js
+          echo "};" >> config.js
 
       - name: Setup Pages
-        uses: actions/configure-pages@v5
+        uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: '.'
 
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - name: Deploy
         uses: actions/deploy-pages@v4
