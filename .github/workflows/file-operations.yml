@@ -15,48 +15,45 @@ on:
         type: string
 
 jobs:
-  file-operation:
+  run:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
-          fetch-depth: 0
 
-      - name: Resolve params
-        id: resolve-params
+      - name: Resolve
+        id: resolve
         run: |
           echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
           echo "filename=${{ github.event.inputs.filename }}" >> $GITHUB_OUTPUT
 
-      - name: Validate
-        run: |
-          if [ -z "${{ steps.resolve-params.outputs.filename }}" ]; then exit 1; fi
-
       - name: Prepare dir
         run: mkdir -p files
 
-      - name: Create empty file (占位，解决大小限制)
-        if: steps.resolve-params.outputs.action == 'file-upload'
+      - name: Create empty file (upload)
+        if: github.event.inputs.action == 'file-upload'
         env:
-          FN: ${{ steps.resolve-params.outputs.filename }}
+          FN: ${{ steps.resolve.outputs.filename }}
         run: |
-          echo "placeholder" > files/$FN
+          echo "placeholder" > "files/$FN"
 
       - name: Delete file
-        if: steps.resolve-params.outputs.action == 'file-delete'
+        if: github.event.inputs.action == 'file-delete'
         env:
-          FN: ${{ steps.resolve-params.outputs.filename }}
+          FN: ${{ steps.resolve.outputs.filename }}
         run: |
-          rm -f files/$FN
+          rm -f "files/$FN"
 
       - name: Commit & push
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "GitHub Actions Bot"
+          git config --local user.email "bot@github.com"
+          git config --local user.name "GitHub Bot"
           git add files/
           if git diff --staged --quiet; then exit 0; fi
           git commit -m "File: $FN"

@@ -20,28 +20,20 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
       - name: Generate config.js
         run: |
-          echo "// 自动生成的配置文件" > config.js
-          echo "window.APP_CONFIG = {" >> config.js
+          echo "window.APP_CONFIG = {" > config.js
           echo "  GITHUB_REPO: '${{ github.repository }}'," >> config.js
           echo "  BRANCH: 'main'," >> config.js
           echo "  FILES_DIR: 'files/'" >> config.js
           echo "};" >> config.js
-
       - name: Setup Pages
         uses: actions/configure-pages@v4
-
-      - name: Upload Pages artifact
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - name: Deploy
         uses: actions/deploy-pages@v4
