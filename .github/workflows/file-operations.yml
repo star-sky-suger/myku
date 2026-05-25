@@ -2,49 +2,43 @@ name: File Operations
 run-name: ${{ github.event.inputs.action || github.event.action }} by @${{ github.actor }}
 
 on:
-  # 支持两种触发方式：手动在 Actions 页面触发 / 前端通过 repository_dispatch 触发
   workflow_dispatch:
     inputs:
       action:
-        description: 'Action to perform: file-upload / file-delete'
+        description: 'file-upload / file-delete'
         required: true
         type: choice
         options:
           - file-upload
           - file-delete
       filename:
-        description: 'Target filename (e.g. test.txt)'
+        description: '文件名'
         required: true
         type: string
       content:
-        description: 'Base64 encoded file content (required for file-upload)'
+        description: 'Base64（上传用）'
         required: false
         type: string
 
   repository_dispatch:
     types: [file-upload, file-delete]
 
-# 权限说明：
-# 1. 读写仓库文件、提交代码：需要 repo 权限（由你的 GH_TOKEN 提供）
-# 2. 触发其他工作流：需要 workflow 权限（由你的 GH_TOKEN 提供）
 jobs:
   file-operation:
     runs-on: ubuntu-latest
-    # 统一处理两种触发源的参数
     if: |
       (github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'file-upload' || github.event.inputs.action == 'file-delete')) ||
       (github.event_name == 'repository_dispatch' && (github.event.action == 'file-upload' || github.event.action == 'file-delete'))
     steps:
-      - name: Checkout repository
+      - name: Checkout
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }} # 用你的 PAT 拉取代码，确保有写权限
-          fetch-depth: 0 # 拉取完整 Git 历史，确保能正常提交
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: 0
 
-      - name: Resolve action and parameters
+      - name: Resolve params
         id: resolve-params
         run: |
-          # 统一两种触发源的参数
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
             echo "filename=${{ github.event.inputs.filename }}" >> $GITHUB_OUTPUT
@@ -61,79 +55,55 @@ jobs:
           ACTION="${{ steps.resolve-params.outputs.action }}"
           FILENAME="${{ steps.resolve-params.outputs.filename }}"
           CONTENT="${{ steps.resolve-params.outputs.content }}"
-
           if [ -z "$FILENAME" ]; then
-            echo "❌ 错误：文件名不能为空"
+            echo "❌ 文件名不能为空"
             exit 1
           fi
-
           if [ "$ACTION" = "file-upload" ] && [ -z "$CONTENT" ]; then
-            echo "❌ 错误：上传文件时必须提供 Base64 编码的内容"
+            echo "❌ 上传需要 content"
             exit 1
           fi
-
-          echo "✅ 参数校验通过"
-          echo "操作类型: $ACTION"
-          echo "目标文件: $FILENAME"
         shell: bash
 
-      - name: Prepare files directory
+      - name: Prepare dir
         run: mkdir -p files
         shell: bash
 
-      - name: Handle file upload
+      - name: Upload file
         if: steps.resolve-params.outputs.action == 'file-upload'
         env:
           FN: ${{ steps.resolve-params.outputs.filename }}
           B64: ${{ steps.resolve-params.outputs.content }}
         run: |
-          echo "正在解码并保存文件: files/$FN"
           echo "$B64" | base64 -d > "files/$FN"
-
           if [ ! -f "files/$FN" ]; then
-            echo "❌ 错误：文件解码失败，未生成目标文件"
+            echo "❌ 解码失败"
             exit 1
           fi
-
-          echo "✅ 文件保存成功: files/$FN"
         shell: bash
 
-      - name: Handle file deletion
+      - name: Delete file
         if: steps.resolve-params.outputs.action == 'file-delete'
         env:
           FN: ${{ steps.resolve-params.outputs.filename }}
         run: |
-          FILE_PATH="files/$FN"
-          if [ -f "$FILE_PATH" ]; then
-            echo "正在删除文件: $FILE_PATH"
-            rm "$FILE_PATH"
-            echo "✅ 文件删除成功"
-          else
-            echo "⚠️  警告：文件 $FILE_PATH 不存在，无需删除"
-            exit 0
+          FILE="files/$FN"
+          if [ -f "$FILE" ]; then
+            rm "$FILE"
           fi
         shell: bash
 
-      - name: Commit and push changes
+      - name: Commit & push
         env:
-          FN: ${{ steps.resolve-params.outputs.filename }}
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "GitHub Actions Bot"
-
-          # 暂存 files/ 目录的变更
           git add files/
-
-          # 检查是否有实际变更，避免空提交
           if git diff --staged --quiet; then
-            echo "ℹ️  无文件变更，无需提交"
+            echo "ℹ️ 无变更"
             exit 0
           fi
-
-          # 提交变更并推送到 main 分支（会自动触发 deploy.yml）
-          git commit -m "File operation: ${{ steps.resolve-params.outputs.action }} - $FN [auto]"
+          git commit -m "File: $FN"
           git push origin main
-
-          echo "✅ 代码提交成功，将自动触发 Pages 部署"
         shell: bash
