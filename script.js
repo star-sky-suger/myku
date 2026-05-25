@@ -1,7 +1,6 @@
 const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';
 const BRANCH = window.APP_CONFIG?.BRANCH || 'main';
 const FILES_DIR = window.APP_CONFIG?.FILES_DIR || 'files/';
-const GH_TOKEN = window.APP_CONFIG?.GH_TOKEN || '';
 
 // DOM
 const uploadArea = document.getElementById('uploadArea');
@@ -55,6 +54,7 @@ async function uploadFiles(files) {
   showProgress();
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
   let uploadedSize = 0;
+
   for (const file of files) {
     try {
       await triggerWorkflow('file-upload', file);
@@ -65,6 +65,7 @@ async function uploadFiles(files) {
       alert(`上传失败：${err.message}`);
     }
   }
+
   hideProgress();
   await sleep(3000);
   await loadFiles();
@@ -82,31 +83,27 @@ async function deleteFile(file) {
   }
 }
 
+// 前端：只传文件名，不传base64、不传token
 async function triggerWorkflow(actionType, file) {
   const repo = GITHUB_REPO;
   let filename = '';
-  let content = '';
-  if (file) {
-    filename = `${Date.now()}-${file.name}`;
-    if (actionType === 'file-upload') {
-      content = await readFileAsBase64(file);
-    }
-  }
+  if (file) filename = `${Date.now()}-${file.name}`;
+
   const res = await fetch(
     `https://api.github.com/repos/${repo}/actions/workflows/file-operations.yml/dispatches`,
     {
       method: 'POST',
       headers: {
         'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json',
-        'Authorization': `token ${GH_TOKEN}`
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         ref: BRANCH,
-        inputs: { action: actionType, filename, content }
+        inputs: { action: actionType, filename }
       })
     }
   );
+
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: '未知错误' }));
     throw new Error(err.message || `HTTP ${res.status}`);
