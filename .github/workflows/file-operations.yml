@@ -1,150 +1,139 @@
 name: File Operations
+run-name: ${{ github.event.inputs.action || github.event.action }} by @${{ github.actor }}
+
 on:
+  # 支持两种触发方式：手动在 Actions 页面触发 / 前端通过 repository_dispatch 触发
   workflow_dispatch:
     inputs:
       action:
-        description: 'Action: file-upload / file-delete'
+        description: 'Action to perform: file-upload / file-delete'
+        required: true
+        type: choice
+        options:
+          - file-upload
+          - file-delete
+      filename:
+        description: 'Target filename (e.g. test.txt)'
         required: true
         type: string
-        default: 'file-upload'
-      filename:
-        description: 'Name of the file to upload/delete (e.g. test.txt)'
-        required: false
-        type: string
       content:
-        description: 'Base64 encoded content of the file (for upload only)'
+        description: 'Base64 encoded file content (required for file-upload)'
         required: false
         type: string
+
   repository_dispatch:
     types: [file-upload, file-delete]
 
+# 权限说明：
+# 1. 读写仓库文件、提交代码：需要 repo 权限（由你的 GH_TOKEN 提供）
+# 2. 触发其他工作流：需要 workflow 权限（由你的 GH_TOKEN 提供）
 jobs:
-  dispatch:
+  file-operation:
     runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
+    # 统一处理两种触发源的参数
+    if: |
+      (github.event_name == 'workflow_dispatch' && (github.event.inputs.action == 'file-upload' || github.event.inputs.action == 'file-delete')) ||
+      (github.event_name == 'repository_dispatch' && (github.event.action == 'file-upload' || github.event.action == 'file-delete'))
     steps:
-      - name: Call repository_dispatch
-        uses: fjogeleit/http-request-action@v1
-        with:
-          url: 'https://api.github.com/repos/${{ github.repository }}/dispatches'
-          method: 'POST'
-          contentType: 'application/json'
-          data: |
-            {
-              "event_type": "${{ github.event.inputs.action }}",
-              "client_payload": {
-                "filename": "${{ github.event.inputs.filename }}",
-                "content": "${{ github.event.inputs.content }}"
-              }
-            }
-          bearerToken: ${{ secrets.GH_TOKEN }}
-          timeout: 10000
-          failOnStatusCode: true
-
-  upload-file:
-    needs: [dispatch]
-    if: github.event_name == 'repository_dispatch' && github.event.action == 'file-upload' || github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'file-upload'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.GH_TOKEN }}  # 使用有权限的GH_TOKEN拉取代码
-          fetch-depth: 0  # 拉取完整历史
+          token: ${{ secrets.GH_TOKEN }} # 用你的 PAT 拉取代码，确保有写权限
+          fetch-depth: 0 # 拉取完整 Git 历史，确保能正常提交
+
+      - name: Resolve action and parameters
+        id: resolve-params
+        run: |
+          # 统一两种触发源的参数
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
+            echo "filename=${{ github.event.inputs.filename }}" >> $GITHUB_OUTPUT
+            echo "content=${{ github.event.inputs.content }}" >> $GITHUB_OUTPUT
+          else
+            echo "action=${{ github.event.action }}" >> $GITHUB_OUTPUT
+            echo "filename=${{ github.event.client_payload.filename }}" >> $GITHUB_OUTPUT
+            echo "content=${{ github.event.client_payload.content }}" >> $GITHUB_OUTPUT
+          fi
+        shell: bash
 
       - name: Validate inputs
         run: |
-          if [ -z "${{ github.event.client_payload.filename || github.event.inputs.filename }}" ]; then
-            echo "Error: filename is required for file upload"
-            exit 1
-          fi
-          if [ -z "${{ github.event.client_payload.content || github.event.inputs.content }}" ]; then
-            echo "Error: content (base64) is required for file upload"
+          ACTION="${{ steps.resolve-params.outputs.action }}"
+          FILENAME="${{ steps.resolve-params.outputs.filename }}"
+          CONTENT="${{ steps.resolve-params.outputs.content }}"
+
+          if [ -z "$FILENAME" ]; then
+            echo "❌ 错误：文件名不能为空"
             exit 1
           fi
 
-      - name: Ensure files directory
+          if [ "$ACTION" = "file-upload" ] && [ -z "$CONTENT" ]; then
+            echo "❌ 错误：上传文件时必须提供 Base64 编码的内容"
+            exit 1
+          fi
+
+          echo "✅ 参数校验通过"
+          echo "操作类型: $ACTION"
+          echo "目标文件: $FILENAME"
+        shell: bash
+
+      - name: Prepare files directory
         run: mkdir -p files
         shell: bash
 
-      - name: Decode and save file
+      - name: Handle file upload
+        if: steps.resolve-params.outputs.action == 'file-upload'
         env:
-          FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
-          B64: ${{ github.event.client_payload.content || github.event.inputs.content }}
+          FN: ${{ steps.resolve-params.outputs.filename }}
+          B64: ${{ steps.resolve-params.outputs.content }}
         run: |
-          echo "Decoding base64 content to files/$FN"
+          echo "正在解码并保存文件: files/$FN"
           echo "$B64" | base64 -d > "files/$FN"
-          # 验证文件是否生成
+
           if [ ! -f "files/$FN" ]; then
-            echo "Error: File not created after decoding"
+            echo "❌ 错误：文件解码失败，未生成目标文件"
             exit 1
           fi
-          echo "File saved successfully: files/$FN"
+
+          echo "✅ 文件保存成功: files/$FN"
         shell: bash
 
-      - name: Commit and push changes
-        run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add files/"$FN"
-          # 检查是否有变更
-          if git diff --staged --quiet; then
-            echo "No changes to commit for file $FN"
-            exit 0
-          fi
-          git commit -m "Upload file: $FN [Automated by GitHub Actions]"
-          git push origin main
+      - name: Handle file deletion
+        if: steps.resolve-params.outputs.action == 'file-delete'
         env:
-          FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-        shell: bash
-
-  delete-file:
-    needs: [dispatch]
-    if: github.event_name == 'repository_dispatch' && github.event.action == 'file-delete' || github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'file-delete'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_TOKEN }}
-          fetch-depth: 0
-
-      - name: Validate inputs
-        run: |
-          if [ -z "${{ github.event.client_payload.filename || github.event.inputs.filename }}" ]; then
-            echo "Error: filename is required for file delete"
-            exit 1
-          fi
-        shell: bash
-
-      - name: Delete file
-        env:
-          FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
+          FN: ${{ steps.resolve-params.outputs.filename }}
         run: |
           FILE_PATH="files/$FN"
           if [ -f "$FILE_PATH" ]; then
-            echo "Deleting file: $FILE_PATH"
+            echo "正在删除文件: $FILE_PATH"
             rm "$FILE_PATH"
+            echo "✅ 文件删除成功"
           else
-            echo "Warning: File $FILE_PATH does not exist, skipping delete"
+            echo "⚠️  警告：文件 $FILE_PATH 不存在，无需删除"
             exit 0
           fi
         shell: bash
 
       - name: Commit and push changes
+        env:
+          FN: ${{ steps.resolve-params.outputs.filename }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
+
+          # 暂存 files/ 目录的变更
           git add files/
-          # 检查是否有变更
+
+          # 检查是否有实际变更，避免空提交
           if git diff --staged --quiet; then
-            echo "No changes to commit (file may already be deleted)"
+            echo "ℹ️  无文件变更，无需提交"
             exit 0
           fi
-          git commit -m "Delete file: $FN [Automated by GitHub Actions]"
+
+          # 提交变更并推送到 main 分支（会自动触发 deploy.yml）
+          git commit -m "File operation: ${{ steps.resolve-params.outputs.action }} - $FN [auto]"
           git push origin main
-        env:
-          FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+
+          echo "✅ 代码提交成功，将自动触发 Pages 部署"
         shell: bash
