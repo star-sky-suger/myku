@@ -28,3 +28,4 @@ jobs:
           github_token: ${{ secrets.GH_TOKEN }}
           publish_dir: .
           force_orphan: true
+        
