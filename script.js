@@ -9,7 +9,7 @@ const uploadProgress = document.getElementById('uploadProgress');
 const filesContainer = document.getElementById('filesContainer');
 const previewModal = document.getElementById('previewModal');
 const closeModal = document.getElementById('closeModal');
-const previewTitle = document.getElementById('previewTitle');
+const previewTitle = document.getElementById('preview');
 const previewBody = document.getElementById('previewBody');
 const downloadLink = document.getElementById('downloadLink');
 
@@ -55,9 +55,9 @@ async function uploadFiles(files) {
   let uploadedSize = 0;
   for (const file of files) {
     try {
-      await triggerWorkflow('file-upload', file);
+      await triggerRepoDispatch('file-upload', file);
       uploadedSize += file.size;
-      updateProgress(uploadedSize, total);
+      updateProgress(uploadedSize, totalSize);
     } catch (err) {
       console.error(err);
       alert(`上传失败：${err.message}`);
@@ -71,7 +71,7 @@ async function uploadFiles(files) {
 async function deleteFile(file) {
   if (!confirm(`确定删除「${file.name.replace(/^\d+-/, '')}」？`)) return;
   try {
-    await triggerWorkflow('file-delete', file);
+    await triggerRepoDispatch('file-delete', null, file.name);
     alert('删除已提交，刷新即可');
     await sleep(3000);
     await loadFiles();
@@ -80,26 +80,30 @@ async function deleteFile(file) {
   }
 }
 
-// 前端：**匿名触发、只传文件名、不传内容、不传Token**
-async function triggerWorkflow(actionType, file) {
+// 匿名触发 repository_dispatch（不用 Token）
+async function triggerRepoDispatch(actionType, file, filename) {
   const repo = GITHUB_REPO;
-  let filename = '';
-  if (file) filename = `${Date.now()}-${file.name}`;
+  let content = '';
+  let realFilename = filename || '';
+  if (file) {
+    realFilename = `${Date.now()}-${file.name}`;
+    content = await readFileAsBase64(file);
+  }
 
-  const res = await fetch(
-    `https://api.github.com/repos/${repo}/actions/workflows/file-operations.yml/dispatches`,
-    {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        ref: BRANCH,
-        inputs: { action: actionType, filename }
-      })
-    }
-  );
+  const res = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
+    method: 'POST',
+    headers: {
+      'Accept': 'application/vnd.github.v3+json',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      event_type: actionType,
+      client_payload: {
+        filename: realFilename,
+        content: content
+      }
+    })
+  });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: '未知错误' }));
