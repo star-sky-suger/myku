@@ -1,6 +1,7 @@
 const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';
 const BRANCH = window.APP_CONFIG?.BRANCH || 'main';
 const FILES_DIR = window.APP_CONFIG?.FILES_DIR || 'files/';
+const GH_TOKEN = window.APP_CONFIG?.GH_TOKEN || '';
 
 const uploadArea = document.getElementById('uploadArea');
 const uploadBtn = document.getElementById('uploadBtn');
@@ -9,7 +10,7 @@ const uploadProgress = document.getElementById('uploadProgress');
 const filesContainer = document.getElementById('filesContainer');
 const previewModal = document.getElementById('previewModal');
 const closeModal = document.getElementById('closeModal');
-const previewTitle = document.getElementById('preview');
+const previewTitle = document.getElementById('previewTitle');
 const previewBody = document.getElementById('previewBody');
 const downloadLink = document.getElementById('downloadLink');
 
@@ -55,7 +56,7 @@ async function uploadFiles(files) {
   let uploadedSize = 0;
   for (const file of files) {
     try {
-      await triggerRepoDispatch('file-upload', file);
+      await uploadFileToGitHub(file);
       uploadedSize += file.size;
       updateProgress(uploadedSize, totalSize);
     } catch (err) {
@@ -64,50 +65,63 @@ async function uploadFiles(files) {
     }
   }
   hideProgress();
-  await sleep(3000);
+  await sleep(2000);
   await loadFiles();
 }
 
-async function deleteFile(file) {
-  if (!confirm(`确定删除「${file.name.replace(/^\d+-/, '')}」？`)) return;
-  try {
-    await triggerRepoDispatch('file-delete', null, file.name);
-    alert('删除已提交，刷新即可');
-    await sleep(3000);
-    await loadFiles();
-  } catch (err) {
-    alert(`删除失败：${err.message}`);
-  }
-}
-
-// 匿名触发 repository_dispatch（不用 Token）
-async function triggerRepoDispatch(actionType, file, filename) {
-  const repo = GITHUB_REPO;
-  let content = '';
-  let realFilename = filename || '';
-  if (file) {
-    realFilename = `${Date.now()}-${file.name}`;
-    content = await readFileAsBase64(file);
-  }
-
-  const res = await fetch(`https://api.github.com/repos/${repo}/dispatches`, {
-    method: 'POST',
+async function uploadFileToGitHub(file) {
+  const filename = `${Date.now()}-${file.name}`;
+  const filePath = `${FILES_DIR}${filename}`;
+  const content = await readFileAsBase64(file);
+  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`;
+  const res = await fetch(url, {
+    method: 'PUT',
     headers: {
       'Accept': 'application/vnd.github.v3+json',
+      'Authorization': `token ${GH_TOKEN}`,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      event_type: actionType,
-      client_payload: {
-        filename: realFilename,
-        content: content
-      }
+      message: `Upload ${filename}`,
+      content: content,
+      branch: BRANCH
     })
   });
-
   if (!res.ok) {
     const err = await res.json().catch(() => ({ message: '未知错误' }));
     throw new Error(err.message || `HTTP ${res.status}`);
+  }
+}
+
+async function deleteFile(file) {
+  if (!confirm(`删除「${file.name.replace(/^\d+-/, '')}」？`)) return;
+  const filePath = `${FILES_DIR}${file.name}`;
+  try {
+    const getRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
+      headers: { 'Authorization': `token ${GH_TOKEN}` }
+    });
+    if (!getRes.ok) throw new Error('获取文件信息失败');
+    const fileInfo = await getRes.json();
+    const sha = fileInfo.sha;
+
+    const deleteRes = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/contents/${filePath}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `token ${GH_TOKEN}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        message: `Delete ${file.name}`,
+        sha: sha,
+        branch: BRANCH
+      })
+    });
+    if (!deleteRes.ok) throw new Error('删除失败');
+    alert('删除成功，刷新中');
+    await sleep(2000);
+    await loadFiles();
+  } catch (err) {
+    alert(`删除失败：${err.message}`);
   }
 }
 
@@ -156,10 +170,10 @@ async function loadFiles() {
 }
 
 async function getFilesListFromAPI() {
-  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILES_DIR}?ref=${BRANCH}`;
-  const res = await fetch(url, {
-    headers: { 'Accept': 'application/vnd.github.v3+json' }
-  });
+  const url = `https://api.github.com/repos/${GITHUB_REPO}/contents/${FILES_DIR}`;
+  const headers = { 'Accept': 'application/vnd.github.v3+json' };
+  if (GH_TOKEN) headers['Authorization'] = `token ${GH_TOKEN}`;
+  const res = await fetch(url, { headers });
   if (res.status === 404) return [];
   if (!res.ok) throw new Error('获取文件列表失败');
   return await res.json();
