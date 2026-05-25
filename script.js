@@ -83,7 +83,7 @@ async function deleteFile(file) {
   }
 }
 
-// 前端：只传文件名，不传base64、不传token
+// 前端：只传文件名，**不带任何 Token**
 async function triggerWorkflow(actionType, file) {
   const repo = GITHUB_REPO;
   let filename = '';
