@@ -2,7 +2,6 @@ const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';
 const BRANCH = window.APP_CONFIG?.BRANCH || 'main';
 const FILES_DIR = window.APP_CONFIG?.FILES_DIR || 'files/';
 
-// DOM
 const uploadArea = document.getElementById('uploadArea');
 const uploadBtn = document.getElementById('uploadBtn');
 const fileInput = document.getElementById('fileInput');
@@ -54,18 +53,16 @@ async function uploadFiles(files) {
   showProgress();
   const totalSize = files.reduce((sum, f) => sum + f.size, 0);
   let uploadedSize = 0;
-
   for (const file of files) {
     try {
       await triggerWorkflow('file-upload', file);
       uploadedSize += file.size;
-      updateProgress(uploadedSize, totalSize);
+      updateProgress(uploadedSize, total);
     } catch (err) {
       console.error(err);
       alert(`上传失败：${err.message}`);
     }
   }
-
   hideProgress();
   await sleep(3000);
   await loadFiles();
@@ -83,7 +80,7 @@ async function deleteFile(file) {
   }
 }
 
-// 前端：只传文件名，**不带任何 Token**
+// 前端：**匿名触发、只传文件名、不传内容、不传Token**
 async function triggerWorkflow(actionType, file) {
   const repo = GITHUB_REPO;
   let filename = '';
