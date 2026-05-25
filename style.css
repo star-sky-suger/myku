@@ -2,258 +2,111 @@
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    font-family: system-ui, -apple-system, sans-serif;
 }
-
 body {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
+    background-color: #f5f7fa;
     padding: 2rem;
 }
-
 .container {
-    max-width: 1200px;
+    max-width: 1000px;
     margin: 0 auto;
 }
-
-header {
+h1 {
     text-align: center;
+    color: #333;
     margin-bottom: 2rem;
 }
-
-header h1 {
-    color: white;
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-header p {
-    color: rgba(255,255,255,0.8);
-    font-size: 1.1rem;
-}
-
-/* 上传区域 */
-.upload-section {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    margin-bottom: 2rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-}
-
 .upload-area {
-    border: 3px dashed #ddd;
-    border-radius: 12px;
-    padding: 3rem;
+    border: 2px dashed #ccc;
+    border-radius: 8px;
+    padding: 2rem;
     text-align: center;
-    transition: all 0.3s ease;
-    cursor: pointer;
-    background: #fafafa;
+    background: white;
+    transition: all 0.3s;
+    margin-bottom: 2rem;
 }
-
-.upload-area:hover,
 .upload-area.dragover {
-    border-color: #667eea;
-    background: #f0f4ff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.2);
+    border-color: #007bff;
+    background-color: #e9f5ff;
 }
-
-.upload-icon {
-    font-size: 4rem;
-    margin-bottom: 1rem;
-}
-
-.upload-area p {
-    color: #666;
-    margin: 0.5rem 0;
-}
-
 .upload-btn {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background-color: #007bff;
     color: white;
     border: none;
-    padding: 12px 32px;
-    border-radius: 8px;
-    font-size: 1rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 4px;
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    font-size: 1rem;
     margin-top: 1rem;
 }
-
 .upload-btn:hover {
-    transform: scale(1.05);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    background-color: #0056b3;
 }
-
-/* 上传进度 */
 .upload-progress {
-    margin-top: 1rem;
+    background: white;
     padding: 1rem;
-    background: #f8f9fa;
     border-radius: 8px;
+    margin-bottom: 2rem;
     display: none;
 }
-
 .progress-bar {
-    height: 10px;
+    height: 8px;
     background: #eee;
-    border-radius: 5px;
+    border-radius: 4px;
     overflow: hidden;
     margin-bottom: 0.5rem;
 }
-
 .progress-fill {
     height: 100%;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: #007bff;
     width: 0%;
-    transition: width 0.3s ease;
+    transition: width 0.3s;
 }
-
-.progress-text {
-    color: #666;
-    font-size: 0.9rem;
-}
-
-/* 文件列表区域 */
-.files-section {
-    background: white;
-    border-radius: 16px;
-    padding: 2rem;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    flex-wrap: wrap;
-    gap: 1rem;
-}
-
-.section-header h2 {
-    color: #333;
-    font-size: 1.5rem;
-}
-
-/* 搜索框 */
-.search-bar {
-    position: relative;
-    width: 100%;
-    max-width: 300px;
-}
-
-.search-bar input {
-    width: 100%;
-    padding: 10px 40px 10px 15px;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-}
-
-.search-bar input:focus {
-    outline: none;
-    border-color: #667eea;
-}
-
-.search-icon {
-    position: absolute;
-    right: 12px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #999;
-}
-
-/* 文件网格 */
 .files-container {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 1rem;
 }
-
-/* 文件卡片 */
 .file-card {
-    background: #fafafa;
-    border-radius: 12px;
-    padding: 1.2rem;
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
-    transition: transform 0.2s, box-shadow 0.2s;
-    border: 1px solid #e0e0e0;
 }
-
-.file-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.1);
-    border-color: #667eea;
-}
-
 .file-icon {
-    font-size: 2.5rem;
+    font-size: 2rem;
     text-align: center;
 }
-
 .file-name {
-    font-weight: 600;
-    color: #333;
+    font-weight: 500;
     text-align: center;
     word-break: break-all;
-    font-size: 0.9rem;
 }
-
 .file-info {
     font-size: 0.8rem;
     color: #666;
     text-align: center;
 }
-
-.file-date {
-    font-size: 0.75rem;
-    color: #999;
-    text-align: center;
-}
-
 .file-actions {
     display: flex;
-    gap: 0.4rem;
-    margin-top: auto;
+    justify-content: space-between;
+    gap: 0.3rem;
+    margin-top: 0.5rem;
 }
-
 .action-btn {
-    flex: 1;
-    padding: 8px 12px;
+    padding: 0.3rem 0.6rem;
     border: none;
-    border-radius: 6px;
+    border-radius: 4px;
     cursor: pointer;
     font-size: 0.8rem;
-    font-weight: 500;
-    transition: opacity 0.2s;
 }
-
-.action-btn:hover {
-    opacity: 0.9;
-}
-
-.preview-btn { 
-    background: linear-gradient(135deg, #28a745 0%, #20c997 100%); 
-    color: white; 
-}
-
-.download-btn { 
-    background: linear-gradient(135deg, #17a2b8 0%, #6f42c1 100%); 
-    color: white; 
-}
-
-.delete-btn { 
-    background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%); 
-    color: white; 
-}
-
-/* 模态框 */
+.preview-btn { background: #28a745; color: white; }
+.download-btn { background: #17a2b8; color: white; }
+.delete-btn { background: #dc3545; color: white; }
 .modal {
     display: none;
     position: fixed;
@@ -261,145 +114,64 @@ header p {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.5);
     z-index: 1000;
-    backdrop-filter: blur(4px);
 }
-
 .modal-content {
     background: white;
     margin: 5% auto;
     width: 90%;
-    max-width: 900px;
-    border-radius: 16px;
+    max-width: 800px;
+    border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
 }
-
 .modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1.2rem;
+    padding: 1rem;
     border-bottom: 1px solid #eee;
-    background: #f8f9fa;
 }
-
-.modal-header h3 {
-    color: #333;
-    font-size: 1.2rem;
-}
-
 .close-btn {
     background: none;
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
     color: #666;
-    padding: 0 0.5rem;
-    transition: color 0.2s;
 }
-
 .close-btn:hover {
     color: #000;
 }
-
 .modal-body {
-    padding: 1.5rem;
-    max-height: 70vh;
+    padding: 1rem;
+    max-height: 60vh;
     overflow: auto;
 }
-
 .modal-footer {
     padding: 1rem;
     border-top: 1px solid #eee;
     text-align: center;
-    background: #f8f9fa;
 }
-
-.modal-footer .action-btn {
-    display: inline-block;
-    text-decoration: none;
-    padding: 12px 32px;
-    font-size: 1rem;
-}
-
-/* 空状态和加载状态 */
 .empty-state {
     text-align: center;
     color: #666;
-    padding: 3rem;
+    padding: 2rem;
 }
-
-.empty-state p {
-    margin-bottom: 1rem;
-}
-
 .loading {
     text-align: center;
     color: #666;
-    padding: 3rem;
+    padding: 2rem;
 }
-
 .no-preview {
     text-align: center;
     color: #666;
-    padding: 3rem;
+    padding: 2rem;
 }
-
-/* 响应式设计 */
-@media (max-width: 768px) {
+@media (max-width: 600px) {
+    .files-container {
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    }
     body {
         padding: 1rem;
     }
-    
-    header h1 {
-        font-size: 1.8rem;
-    }
-    
-    .upload-area {
-        padding: 2rem 1rem;
-    }
-    
-    .section-header {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    
-    .search-bar {
-        max-width: none;
-    }
-    
-    .files-container {
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
-    }
-    
-    .file-card {
-        padding: 1rem;
-    }
-    
-    .action-btn {
-        padding: 6px 8px;
-        font-size: 0.7rem;
-    }
-}
-
-/* 滚动条样式 */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #a8a8a8;
 }
