@@ -48,6 +48,7 @@ h1 {
     padding: 1rem;
     border-radius: 8px;
     margin-bottom: 2rem;
+    display: none;
 }
 .progress-bar {
     height: 8px;
@@ -136,6 +137,10 @@ h1 {
     border: none;
     font-size: 1.5rem;
     cursor: pointer;
+    color: #666;
+}
+.close-btn:hover {
+    color: #000;
 }
 .modal-body {
     padding: 1rem;
@@ -153,6 +158,11 @@ h1 {
     padding: 2rem;
 }
 .loading {
+    text-align: center;
+    color: #666;
+    padding: 2rem;
+}
+.no-preview {
     text-align: center;
     color: #666;
     padding: 2rem;
