@@ -1,24 +1,44 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches:
       - main
+    paths-ignore:  # 排除不需要触发部署的文件/目录
+      - 'files/**'
+      - '.github/workflows/file-operations.yml'
+  workflow_dispatch:  # 允许手动触发部署
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # 显式声明权限（GH_TOKEN已包含此权限，双重保障）
+      pages: write
+      id-token: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: 0
 
       - name: Generate config.js with environment variables
         run: |
+          # 确保生成的配置文件格式正确
           echo "// 配置文件 - 由GitHub Actions自动生成" > config.js
           echo "window.APP_CONFIG = {" >> config.js
           echo "    GITHUB_REPO: '${{ github.repository }}'," >> config.js
           echo "    BRANCH: 'main'," >> config.js
-          echo "    FILES_DIR: 'files/'}" >> config.js
+          echo "    FILES_DIR: 'files/'" >> config.js
+          echo "};" >> config.js
+          
+          # 验证配置文件内容
+          cat config.js
+        shell: bash
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4  # 官方Pages配置动作，确保环境正确
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -26,4 +46,9 @@ jobs:
           github_token: ${{ secrets.GH_TOKEN }}
           publish_dir: .
           force_orphan: true
+          publish_branch: gh-pages  # 明确指定Pages分支（默认就是gh-pages，显式声明更稳定）
+          keep_files: false  # 清理旧文件，确保部署内容最新
 
+      - name: Verify deployment
+        run: |
+          echo "Pages deployed successfully to: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/"

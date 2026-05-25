@@ -6,16 +6,22 @@ on:
         description: 'Action: file-upload / file-delete'
         required: true
         type: string
+        default: 'file-upload'
       filename:
+        description: 'Name of the file to upload/delete (e.g. test.txt)'
         required: false
         type: string
       content:
+        description: 'Base64 encoded content of the file (for upload only)'
         required: false
         type: string
+  repository_dispatch:
+    types: [file-upload, file-delete]
 
 jobs:
   dispatch:
     runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Call repository_dispatch
         uses: fjogeleit/http-request-action@v1
@@ -32,42 +38,113 @@ jobs:
               }
             }
           bearerToken: ${{ secrets.GH_TOKEN }}
+          timeout: 10000
+          failOnStatusCode: true
 
   upload-file:
-    if: github.event.action == 'file-upload' || github.event.inputs.action == 'file-upload'
+    needs: [dispatch]
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'file-upload' || github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'file-upload'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}  # 使用有权限的GH_TOKEN拉取代码
+          fetch-depth: 0  # 拉取完整历史
+
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ github.event.client_payload.filename || github.event.inputs.filename }}" ]; then
+            echo "Error: filename is required for file upload"
+            exit 1
+          fi
+          if [ -z "${{ github.event.client_payload.content || github.event.inputs.content }}" ]; then
+            echo "Error: content (base64) is required for file upload"
+            exit 1
+          fi
+
       - name: Ensure files directory
         run: mkdir -p files
+        shell: bash
+
       - name: Decode and save file
         env:
           FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
           B64: ${{ github.event.client_payload.content || github.event.inputs.content }}
         run: |
+          echo "Decoding base64 content to files/$FN"
           echo "$B64" | base64 -d > "files/$FN"
-      - name: Commit and push
+          # 验证文件是否生成
+          if [ ! -f "files/$FN" ]; then
+            echo "Error: File not created after decoding"
+            exit 1
+          fi
+          echo "File saved successfully: files/$FN"
+        shell: bash
+
+      - name: Commit and push changes
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
-          git add files/
-          git commit -m "Upload: $FN" || echo "No changes to commit"
-          git push
+          git add files/"$FN"
+          # 检查是否有变更
+          if git diff --staged --quiet; then
+            echo "No changes to commit for file $FN"
+            exit 0
+          fi
+          git commit -m "Upload file: $FN [Automated by GitHub Actions]"
+          git push origin main
+        env:
+          FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: bash
 
   delete-file:
-    if: github.event.action == 'file-delete' || github.event.inputs.action == 'file-delete'
+    needs: [dispatch]
+    if: github.event_name == 'repository_dispatch' && github.event.action == 'file-delete' || github.event_name == 'workflow_dispatch' && github.event.inputs.action == 'file-delete'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+          fetch-depth: 0
+
+      - name: Validate inputs
+        run: |
+          if [ -z "${{ github.event.client_payload.filename || github.event.inputs.filename }}" ]; then
+            echo "Error: filename is required for file delete"
+            exit 1
+          fi
+        shell: bash
+
       - name: Delete file
         env:
           FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
         run: |
-          if [ -f "files/$FN" ]; then
-            rm "files/$FN"
-            git config --local user.email "action@github.com"
-            git config --local user.name "GitHub Action"
-            git add files/
-            git commit -m "Delete: $FN" || echo "No changes to commit"
-            git push
+          FILE_PATH="files/$FN"
+          if [ -f "$FILE_PATH" ]; then
+            echo "Deleting file: $FILE_PATH"
+            rm "$FILE_PATH"
+          else
+            echo "Warning: File $FILE_PATH does not exist, skipping delete"
+            exit 0
           fi
+        shell: bash
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add files/
+          # 检查是否有变更
+          if git diff --staged --quiet; then
+            echo "No changes to commit (file may already be deleted)"
+            exit 0
+          fi
+          git commit -m "Delete file: $FN [Automated by GitHub Actions]"
+          git push origin main
+        env:
+          FN: ${{ github.event.client_payload.filename || github.event.inputs.filename }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+        shell: bash
