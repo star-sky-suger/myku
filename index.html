@@ -6,54 +6,118 @@
     <title>文件共享平台</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: system-ui, sans-serif; background: #f5f5f5; padding: 2rem; }
-        .container { max-width: 800px; margin: 0 auto; }
-        h1 { text-align: center; margin-bottom: 2rem; color: #333; }
+        body { font-family: system-ui, sans-serif; background: #667eea; min-height: 100vh; padding: 2rem; }
+        .container { max-width: 900px; margin: 0 auto; }
+        h1 { text-align: center; margin-bottom: 2rem; color: white; font-size: 2rem; }
         
         .upload-box {
             background: white;
-            border: 3px dashed #ccc;
-            border-radius: 12px;
-            padding: 3rem;
+            border-radius: 16px;
+            padding: 4rem 2rem;
             text-align: center;
             cursor: pointer;
             transition: all 0.3s;
             margin-bottom: 2rem;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         .upload-box:hover, .upload-box.dragover {
-            border-color: #007bff;
-            background: #f0f8ff;
+            transform: translateY(-2px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
         }
-        .upload-box .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .upload-box .icon { font-size: 4rem; margin-bottom: 1rem; }
+        .upload-box p { color: #666; margin: 0.5rem 0; }
         .upload-btn {
-            background: #007bff;
+            background: #667eea;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
+            padding: 12px 30px;
+            border-radius: 8px;
             cursor: pointer;
             font-size: 1rem;
             margin-top: 1rem;
+            transition: background 0.3s;
         }
-        .upload-btn:hover { background: #0056b3; }
+        .upload-btn:hover { background: #5a6fd6; }
         #fileInput { display: none; }
         
         .progress { display: none; margin-bottom: 2rem; padding: 1rem; background: white; border-radius: 8px; }
-        .progress-bar { height: 10px; background: #eee; border-radius: 5px; overflow: hidden; margin-bottom: 0.5rem; }
-        .progress-fill { height: 100%; background: #007bff; width: 0%; }
+        .progress-bar { height: 12px; background: #eee; border-radius: 6px; overflow: hidden; margin-bottom: 0.5rem; }
+        .progress-fill { height: 100%; background: linear-gradient(90deg, #667eea, #764ba2); width: 0%; }
+        .progress-text { color: #666; font-size: 0.9rem; }
         
-        .files-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 1rem; }
-        .file-card { background: white; padding: 1rem; border-radius: 8px; text-align: center; }
-        .file-card .icon { font-size: 2rem; }
-        .file-name { font-weight: 500; margin: 0.5rem 0; }
-        .file-info { font-size: 0.8rem; color: #666; }
+        .search-box { margin-bottom: 1rem; }
+        .search-box input {
+            width: 100%;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
         
-        .empty-state { text-align: center; color: #666; padding: 2rem; background: white; border-radius: 8px; }
-        .loading { text-align: center; color: #666; padding: 2rem; }
+        .files-container { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+        .file-card { 
+            background: white; 
+            padding: 1.5rem; 
+            border-radius: 12px; 
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .file-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+        }
+        .file-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .file-name { font-weight: 500; margin: 0.5rem 0; color: #333; word-break: break-all; }
+        .file-info { font-size: 0.8rem; color: #888; }
+        .file-actions { margin-top: 0.8rem; display: flex; gap: 0.4rem; justify-content: center; }
+        .file-actions button {
+            padding: 4px 10px;
+            font-size: 0.7rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .file-actions .preview-btn { background: #667eea; color: white; }
+        .file-actions .download-btn { background: #28a745; color: white; }
+        .file-actions .delete-btn { background: #dc3545; color: white; }
+        
+        .empty-state { text-align: center; color: white; padding: 3rem; }
+        .loading { text-align: center; color: white; padding: 2rem; }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+        }
+        .modal-content {
+            background: white;
+            margin: 5% auto;
+            padding: 1.5rem;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .modal-header h3 { color: #333; }
+        .close-modal { cursor: pointer; font-size: 1.5rem; color: #999; }
+        #previewBody img, #previewBody video { max-width: 100%; max-height: 60vh; display: block; margin: 0 auto; }
+        #previewBody iframe { width: 100%; height: 60vh; border: none; }
+        #previewBody pre { background: #f5f5f5; padding: 1rem; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+        .no-preview { text-align: center; color: #999; padding: 2rem; }
         
         @media (max-width: 600px) {
             body { padding: 1rem; }
-            .upload-box { padding: 2rem 1rem; }
+            .upload-box { padding: 2.5rem 1rem; }
+            .files-container { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
         }
     </style>
 </head>
@@ -74,49 +138,60 @@
             <div class="progress-text">上传中...</div>
         </div>
         
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="搜索文件...">
+        </div>
+        
         <div class="files-container" id="filesContainer">
             <div class="loading">加载中...</div>
         </div>
     </div>
+    
+    <div class="modal" id="previewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="previewTitle"></h3>
+                <span class="close-modal" id="closeModal">&times;</span>
+            </div>
+            <div id="previewBody"></div>
+            <div style="margin-top: 1rem; text-align: center;">
+                <a id="downloadLink" download style="display: inline-block; padding: 8px 20px; background: #667eea; color: white; border-radius: 6px; text-decoration: none;">下载文件</a>
+            </div>
+        </div>
+    </div>
 
+    <script src="config.js"></script>
     <script>
-        // 配置
         const GITHUB_REPO = window.APP_CONFIG?.GITHUB_REPO || 'star-sky-suger/myku';
         const GH_TOKEN = window.APP_CONFIG?.GH_TOKEN || '';
         const FILES_DIR = 'files/';
-        
-        console.log('Config loaded:', { GITHUB_REPO, hasToken: GH_TOKEN ? 'Yes' : 'No' });
+        let allFiles = [];
         
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('Config:', { GITHUB_REPO, hasToken: GH_TOKEN ? 'Yes' : 'No' });
+            
             const uploadBox = document.getElementById('uploadBox');
             const uploadBtn = document.getElementById('uploadBtn');
             const fileInput = document.getElementById('fileInput');
-            const filesContainer = document.getElementById('filesContainer');
-            const progress = document.getElementById('progress');
+            const searchInput = document.getElementById('searchInput');
             
-            // 点击按钮
             uploadBtn.addEventListener('click', function(e) {
                 e.stopPropagation();
                 fileInput.click();
             });
             
-            // 点击上传区域
             uploadBox.addEventListener('click', function(e) {
                 if (e.target !== uploadBtn) {
                     fileInput.click();
                 }
             });
             
-            // 文件选择
             fileInput.addEventListener('change', function(e) {
                 const files = Array.from(e.target.files);
-                if (files.length > 0) {
-                    uploadFiles(files);
-                }
+                if (files.length > 0) uploadFiles(files);
                 e.target.value = '';
             });
             
-            // 拖拽事件
             uploadBox.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 uploadBox.classList.add('dragover');
@@ -130,24 +205,28 @@
             uploadBox.addEventListener('drop', function(e) {
                 e.preventDefault();
                 uploadBox.classList.remove('dragover');
-                
                 const files = Array.from(e.dataTransfer.files);
-                if (files.length > 0) {
-                    uploadFiles(files);
-                }
+                if (files.length > 0) uploadFiles(files);
             });
             
-            // 全局阻止默认拖拽行为
             document.addEventListener('dragover', function(e) { e.preventDefault(); });
             document.addEventListener('drop', function(e) { e.preventDefault(); });
             
-            // 加载文件列表
+            searchInput.addEventListener('input', function(e) {
+                filterFiles(e.target.value);
+            });
+            
+            document.getElementById('closeModal').addEventListener('click', closeModal);
+            document.getElementById('previewModal').addEventListener('click', function(e) {
+                if (e.target === document.getElementById('previewModal')) closeModal();
+            });
+            
             loadFiles();
         });
         
         async function uploadFiles(files) {
             if (!GH_TOKEN) {
-                alert('错误：未配置上传令牌，请检查部署配置');
+                alert('错误：未配置上传令牌');
                 return;
             }
             
@@ -191,16 +270,14 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: 'Upload file: ' + filename,
+                    message: 'Upload: ' + file.name,
                     content: content,
                     branch: 'main'
                 })
             });
             
-            console.log('Response:', response.status);
-            
             if (!response.ok) {
-                const error = await response.json().catch(() => ({ message: 'Unknown error' }));
+                const error = await response.json().catch(() => ({ message: 'Unknown' }));
                 throw new Error(error.message || 'HTTP ' + response.status);
             }
         }
@@ -208,7 +285,6 @@
         async function deleteFile(filename) {
             if (!confirm('确定删除此文件?')) return;
             
-            // 先获取文件sha
             const getResponse = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + FILES_DIR + filename, {
                 headers: { 'Authorization': 'token ' + GH_TOKEN }
             });
@@ -219,7 +295,6 @@
             }
             
             const fileInfo = await getResponse.json();
-            const sha = fileInfo.sha;
             
             const deleteResponse = await fetch('https://api.github.com/repos/' + GITHUB_REPO + '/contents/' + FILES_DIR + filename, {
                 method: 'DELETE',
@@ -228,14 +303,14 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: 'Delete file: ' + filename,
-                    sha: sha,
+                    message: 'Delete: ' + filename,
+                    sha: fileInfo.sha,
                     branch: 'main'
                 })
             });
             
             if (!deleteResponse.ok) {
-                const error = await deleteResponse.json().catch(() => ({ message: 'Unknown error' }));
+                const error = await deleteResponse.json().catch(() => ({ message: 'Unknown' }));
                 throw new Error(error.message || 'HTTP ' + deleteResponse.status);
             }
             
@@ -266,30 +341,101 @@
                 
                 let files = await response.json();
                 files = files.filter(f => f.type === 'file');
+                files.sort((a, b) => new Date(b.last_modified) - new Date(a.last_modified));
+                allFiles = files;
                 
-                if (files.length === 0) {
-                    container.innerHTML = '<div class="empty-state">暂无文件，拖拽或点击上传</div>';
-                    return;
-                }
-                
-                container.innerHTML = files.map(function(file) {
-                    const icon = getIcon(file.name);
-                    const displayName = file.name.replace(/^\d+-/, '');
-                    return `
-                        <div class="file-card">
-                            <div class="icon">${icon}</div>
-                            <div class="file-name" title="${displayName}">${displayName}</div>
-                            <div class="file-info">${formatSize(file.size)}</div>
-                            <div style="margin-top: 0.5rem; display: flex; gap: 0.3rem; justify-content: center;">
-                                <a href="${file.download_url}" download="${displayName}" style="font-size:0.7rem;color:#007bff">下载</a>
-                                <button onclick="deleteFile('${file.name}')" style="font-size:0.7rem;color:#dc3545;border:none;background:none;cursor:pointer">删除</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
+                displayFiles(files);
             } catch (err) {
                 container.innerHTML = '<div class="empty-state">加载失败: ' + err.message + '</div>';
             }
+        }
+        
+        function displayFiles(files) {
+            const container = document.getElementById('filesContainer');
+            
+            if (!files || files.length === 0) {
+                container.innerHTML = '<div class="empty-state">暂无文件，拖拽或点击上传</div>';
+                return;
+            }
+            
+            container.innerHTML = files.map(function(file) {
+                const icon = getIcon(file.name);
+                const displayName = file.name.replace(/^\d+-/, '');
+                const date = file.last_modified ? formatDate(file.last_modified) : '';
+                return `
+                    <div class="file-card">
+                        <div class="icon">${icon}</div>
+                        <div class="file-name" title="${displayName}">${displayName}</div>
+                        <div class="file-info">${formatSize(file.size)}</div>
+                        ${date ? '<div class="file-info" style="font-size:0.7rem">' + date + '</div>' : ''}
+                        <div class="file-actions">
+                            <button class="preview-btn" onclick="previewFile(${JSON.stringify(file)})">预览</button>
+                            <button class="download-btn" onclick="downloadFile(${JSON.stringify(file)})">下载</button>
+                            <button class="delete-btn" onclick="deleteFile('${file.name}')">删除</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+        
+        function filterFiles(query) {
+            if (!query.trim()) {
+                displayFiles(allFiles);
+                return;
+            }
+            const filtered = allFiles.filter(function(f) {
+                return f.name.toLowerCase().includes(query.toLowerCase());
+            });
+            displayFiles(filtered);
+        }
+        
+        function previewFile(file) {
+            const name = file.name.replace(/^\d+-/, '');
+            document.getElementById('previewTitle').textContent = name;
+            document.getElementById('downloadLink').href = file.download_url;
+            document.getElementById('downloadLink').download = name;
+            
+            const ext = file.name.split('.').pop().toLowerCase();
+            let html = '';
+            
+            if (['jpg','jpeg','png','gif','webp','bmp'].includes(ext)) {
+                html = '<img src="' + file.download_url + '" alt="' + name + '">';
+            } else if (ext === 'pdf') {
+                html = '<iframe src="https://mozilla.github.io/pdf.js/web/viewer.html?file=' + encodeURIComponent(file.download_url) + '"></iframe>';
+            } else if (['mp4','webm','ogg'].includes(ext)) {
+                html = '<video controls src="' + file.download_url + '">';
+            } else if (['mp3','wav','ogg'].includes(ext)) {
+                html = '<audio controls src="' + file.download_url + '" style="width:100%">';
+            } else if (['txt','json','html','css','js'].includes(ext)) {
+                fetch(file.download_url).then(function(r) {
+                    return r.text();
+                }).then(function(text) {
+                    document.getElementById('previewBody').innerHTML = '<pre>' + escapeHtml(text) + '</pre>';
+                }).catch(function() {
+                    document.getElementById('previewBody').innerHTML = '<div class="no-preview">无法预览</div>';
+                });
+                document.getElementById('previewModal').style.display = 'block';
+                return;
+            } else {
+                html = '<div class="no-preview">暂不支持预览此文件类型</div>';
+            }
+            
+            document.getElementById('previewBody').innerHTML = html;
+            document.getElementById('previewModal').style.display = 'block';
+        }
+        
+        function closeModal() {
+            document.getElementById('previewModal').style.display = 'none';
+            document.getElementById('previewBody').innerHTML = '';
+        }
+        
+        function downloadFile(file) {
+            const a = document.createElement('a');
+            a.href = file.download_url;
+            a.download = file.name.replace(/^\d+-/, '');
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
         }
         
         function formatSize(bytes) {
@@ -300,20 +446,30 @@
             return (bytes / Math.pow(k, i)).toFixed(2) + ' ' + sizes[i];
         }
         
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+        }
+        
         function getIcon(name) {
             const ext = name.split('.').pop().toLowerCase();
             const icons = {
-                jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', webp:'🖼️',
-                pdf:'📕', doc:'📘', docx:'📘',
-                xls:'📗', xlsx:'📗', ppt:'📙', pptx:'📙',
-                txt:'📄', zip:'📦', rar:'📦',
-                mp4:'🎬', mp3:'🎵', json:'📋'
+                jpg:'🖼️', jpeg:'🖼️', png:'🖼️', gif:'🖼️', webp:'🖼️', bmp:'🖼️',
+                pdf:'📕', doc:'📘', docx:'📘', xls:'📗', xlsx:'📗', ppt:'📙', pptx:'📙',
+                txt:'📄', zip:'📦', rar:'📦', 7z:'📦',
+                mp4:'🎬', webm:'🎬', ogg:'🎬',
+                mp3:'🎵', wav:'🎵',
+                json:'📋', html:'🌐', css:'🎨', js:'💻'
             };
             return icons[ext] || '📄';
         }
         
-        function sleep(ms) {
-            return new Promise(function(r) { setTimeout(r, ms); });
+        function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+        
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
         }
     </script>
 </body>
