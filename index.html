@@ -12,6 +12,7 @@
             <h1>📁 文件共享平台</h1>
             <p>无需登录，直接上传和下载文件</p>
         </header>
+        
         <main>
             <section class="upload-section">
                 <div class="upload-area" id="uploadArea">
@@ -23,12 +24,20 @@
                 </div>
                 <div class="upload-progress" id="uploadProgress"></div>
             </section>
+            
             <section class="files-section">
-                <h2>📂 文件列表</h2>
+                <div class="section-header">
+                    <h2>📂 文件列表</h2>
+                    <div class="search-bar">
+                        <input type="text" id="searchInput" placeholder="搜索文件..." />
+                        <span class="search-icon">🔍</span>
+                    </div>
+                </div>
                 <div class="files-container" id="filesContainer">
                     <div class="loading">加载中...</div>
                 </div>
             </section>
+            
             <div class="modal" id="previewModal">
                 <div class="modal-content">
                     <div class="modal-header">
@@ -42,10 +51,12 @@
                 </div>
             </div>
         </main>
+        
         <footer>
-            <p style="text-align:center; margin-top:2rem; color:#666;">&copy; 2027 文件共享平台</p>
+            <p>&copy; 2027 文件共享平台 - 无需登录，安全便捷</p>
         </footer>
     </div>
+    
     <script src="config.js"></script>
     <script src="script.js"></script>
 </body>
