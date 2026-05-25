@@ -1,44 +1,30 @@
 name: Deploy to GitHub Pages
+
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+    branches:
+      - main
 
 jobs:
   deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Generate config.js
-        run: |
-          echo "window.APP_CONFIG = {" > config.js
-          echo "  GITHUB_REPO: '${{ github.repository }}'," >> config.js
-          echo "  BRANCH: 'main'," >> config.js
-          echo "  FILES_DIR: 'files/'," >> config.js
-          echo "  GH_TOKEN: '${{ secrets.GH_TOKEN }}'" >> config.js
-          echo "};" >> config.js
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v4
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
         with:
-          path: '.'
+          token: ${{ secrets.GH_TOKEN }}
 
-      - name: Deploy
-        uses: actions/deploy-pages@v4
+      - name: Generate config.js with environment variables
+        run: |
+          echo "// 配置文件 - 由GitHub Actions自动生成" > config.js
+          echo "window.APP_CONFIG = {" >> config.js
+          echo "    GITHUB_REPO: '${{ github.repository }}'," >> config.js
+          echo "    BRANCH: 'main'," >> config.js
+          echo "    FILES_DIR: 'files/'}" >> config.js
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GH_TOKEN }}
+          publish_dir: .
+          force_orphan: true

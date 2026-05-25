@@ -1,0 +1,62 @@
+name: File Operations
+
+on:
+  repository_dispatch:
+    types: [file-upload, file-delete]
+
+jobs:
+  upload-file:
+    if: github.event.action == 'file-upload'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Create files directory
+        run: mkdir -p files
+
+      - name: Decode and save file
+        env:
+          FILENAME: ${{ github.event.client_payload.filename }}
+          CONTENT: ${{ github.event.client_payload.content }}
+        run: |
+          echo "$CONTENT" | base64 -d > "files/$FILENAME"
+          echo "File saved: files/$FILENAME"
+
+      - name: Commit and push
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add files/
+          git commit -m "Upload file: ${{ github.event.client_payload.filename }}"
+          git push https://$GH_TOKEN@github.com/${{ github.repository }}.git
+
+  delete-file:
+    if: github.event.action == 'file-delete'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Delete file
+        env:
+          FILENAME: ${{ github.event.client_payload.filename }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          if [ -f "files/$FILENAME" ]; then
+            rm "files/$FILENAME"
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add files/
+            git commit -m "Delete file: $FILENAME"
+            git push https://$GH_TOKEN@github.com/${{ github.repository }}.git
+            echo "File deleted: $FILENAME"
+          else
+            echo "File not found: $FILENAME"
+          fi
