@@ -1,48 +1,41 @@
 name: File Operations
 on:
-  workflow_dispatch:
-    inputs:
-      action:
-        description: file-upload / file-delete
-        required: true
-        type: choice
-        options:
-          - file-upload
-          - file-delete
-      filename:
-        description: 文件名
-        required: true
-        type: string
+  repository_dispatch:
+    types: [file-upload, file-delete]
 
 jobs:
-  run:
+  file-operation:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_TOKEN }}
 
-      - name: Resolve
+      - name: Resolve params
         id: resolve
         run: |
-          echo "action=${{ github.event.inputs.action }}" >> $GITHUB_OUTPUT
-          echo "filename=${{ github.event.inputs.filename }}" >> $GITHUB_OUTPUT
+          echo "action=${{ github.event.action }}" >> $GITHUB_OUTPUT
+          echo "filename=${{ github.client_payload.filename }}" >> $GITHUB_OUTPUT
+          echo "content=${{ github.client_payload.content }}" >> $GITHUB_OUTPUT
+
+      - name: Validate
+        run: |
+          if [ -z "${{ steps.resolve.outputs.filename }}" ]; then exit 1; fi
 
       - name: Prepare dir
         run: mkdir -p files
 
-      - name: Create empty file (upload)
-        if: github.event.inputs.action == 'file-upload'
+      - name: Upload file
+        if: github.event.action == 'file-upload'
         env:
           FN: ${{ steps.resolve.outputs.filename }}
+          B64: ${{ steps.resolve.outputs.content }}
         run: |
-          echo "placeholder" > "files/$FN"
+          echo "$B64" | base64 -d > "files/$FN"
 
       - name: Delete file
-        if: github.event.inputs.action == 'file-delete'
+        if: github.event.action == 'file-delete'
         env:
           FN: ${{ steps.resolve.outputs.filename }}
         run: |
@@ -52,8 +45,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
-          git config --local user.email "bot@github.com"
-          git config --local user.name "GitHub Bot"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "GitHub Actions Bot"
           git add files/
           if git diff --staged --quiet; then exit 0; fi
           git commit -m "File: $FN"
