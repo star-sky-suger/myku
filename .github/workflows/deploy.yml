@@ -28,12 +28,14 @@ jobs:
           echo "window.APP_CONFIG = {" > config.js
           echo "  GITHUB_REPO: '${{ github.repository }}'," >> config.js
           echo "  BRANCH: 'main'," >> config.js
-          echo "  FILES_DIR: 'files/';" >> config.js
+          echo "  FILES_DIR: 'files/'," >> config.js
+          echo "  GH_TOKEN: '${{ secrets.GH_TOKEN }}'" >> config.js
+          echo "};" >> config.js
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
